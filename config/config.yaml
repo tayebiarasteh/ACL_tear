@@ -1,0 +1,23 @@
+Network:
+  seed: 1
+  batch_size: 1 # number of 3D images to be loaded in the data loader
+  valid_batch_size: 1
+  test_batch_size: 1 # must be dividable by 30 (1, 2, 3, 4, 5, 6, 10, 15, 30)
+  lr: 1e-4
+  weight_decay: 0
+  amsgrad: True
+  resize_shape_h_2D3D: 150
+  resize_shape_w_2D3D: 110
+network_output_path: network_data/
+output_data_path: output_data/
+tb_logs_path: tensor_board_logs/
+stat_log_path: stat_logs
+checkpoint_name: checkpoint.tar
+trained_model_name: trained_model.pth
+
+# changeable items:
+target_dir: /home/soroosh/Documents/Repositories_target_files/ACL_tear/
+network_save_freq: 500 # the real save frequency will be this number times 3
+network_checkpoint_freq: 2
+valid_iteration_freq: 75
+num_iterations: 100000
