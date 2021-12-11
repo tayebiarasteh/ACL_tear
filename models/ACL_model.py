@@ -53,15 +53,15 @@ class Conv_block(nn.Module):
         self.output_conv = nn.Conv2d(out_ch, out_ch, kernel_size=5, padding=3)
         self.pool = nn.MaxPool2d(kernel_size=2, ceil_mode=True)
 
-    def forward(self, input_tensor):
 
+    def forward(self, input_tensor):
         output_tensor = self.iterator(input_tensor, self.input_conv)
         output_tensor = F.relu(output_tensor)
         output_tensor = self.iterator(output_tensor, self.output_conv)
         output_tensor = F.relu(output_tensor)
         output_tensor = self.iterator(output_tensor, self.pool)
-
         return output_tensor
+
 
     def iterator(self, input_tensor, layer):
         temp = []
@@ -79,9 +79,9 @@ class Squeeze_module(nn.Module):
             nn.Conv3d(in_ch, out_ch, kernel_size=1),
             nn.ReLU(inplace=True))
         self.conv2d = nn.Sequential(
-            nn.Conv2d(out_ch/2, out_ch/2, kernel_size=3, padding=1))
+            nn.Conv2d(int(out_ch/2), int(out_ch/2), kernel_size=3, padding=1))
         self.conv3d = nn.Sequential(
-            nn.Conv3d(out_ch/2, out_ch/2, kernel_size=1))
+            nn.Conv3d(int(out_ch/2), int(out_ch/2), kernel_size=1))
 
     def forward(self, input_tensor):
         output_tensor = self.input_conv(input_tensor)
@@ -94,6 +94,7 @@ class Squeeze_module(nn.Module):
         output_tensor = F.relu(output_tensor)
 
         return output_tensor
+
 
     def iterator(self, input_tensor, layer):
         temp = []
@@ -132,11 +133,9 @@ class Squeeze_block(nn.Module):
         self.pool = nn.MaxPool2d(kernel_size=2, ceil_mode=True)
 
     def forward(self, input_tensor):
-
         output_tensor = self.input_squeeze(input_tensor)
         output_tensor = self.output_squeeze(output_tensor)
         output_tensor = self.iterator(output_tensor, self.pool)
-
         return output_tensor
 
 
@@ -156,11 +155,9 @@ class Final_Squeeze_block(nn.Module):
         self.pool = nn.AdaptiveAvgPool3d((1, 1, 1))
 
     def forward(self, input_tensor):
-
         output_tensor = self.input_squeeze(input_tensor)
         output_tensor = self.output_squeeze(output_tensor)
         output_tensor = self.pool(output_tensor)
-
         return output_tensor
 
 
@@ -171,9 +168,9 @@ class Final_Squeeze_module(nn.Module):
             nn.Conv3d(in_ch, out_ch, kernel_size=1),
             nn.ReLU(inplace=True))
         self.conv3d_above = nn.Sequential(
-            nn.Conv3d(out_ch/2, out_ch/2, kernel_size=3, padding=1))
+            nn.Conv3d(int(out_ch/2), int(out_ch/2), kernel_size=3, padding=1))
         self.conv3d_below = nn.Sequential(
-            nn.Conv3d(out_ch/2, out_ch/2, kernel_size=1))
+            nn.Conv3d(int(out_ch/2), int(out_ch/2), kernel_size=1))
 
     def forward(self, input_tensor):
         output_tensor = self.input_conv(input_tensor)
@@ -197,9 +194,64 @@ class Output_block(nn.Module):
     def forward(self, input_tensor):
         output_tensor = self.AdaptiveAvgPool3d(input_tensor)
         output_tensor = self.fully(output_tensor)
-
         return output_tensor
 
+
+# up block 1
+class Res_up_block_one(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super().__init__()
+        self.ch_avg = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, kernel_size=1),
+            nn.BatchNorm2d(out_ch))
+        self.up_sample = nn.Upsample(scale_factor=3)
+        self.ch_avg = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, kernel_size=1),
+            nn.BatchNorm2d(out_ch))
+        self.double_conv = double_conv(in_ch, out_ch)
+
+    def forward(self, down_input, skip_input):
+        down_input = self.up_sample(down_input)
+        if skip_input.shape[-1] != down_input.shape[-1]:
+            diff =  down_input.shape[-1] - skip_input.shape[-1]
+            skip_input = F.pad(skip_input, (0, diff), "constant", 0)
+        if skip_input.shape[-2] != down_input.shape[-2]:
+            diff2 =  down_input.shape[-2] - skip_input.shape[-2]
+            skip_input = F.pad(skip_input, (0, 0, 0, diff2), "constant", 0)
+
+        input_tensor = torch.cat([down_input, skip_input], dim=1)
+        identity = self.ch_avg(input_tensor)
+        out = self.double_conv(input_tensor)
+        output_tensor = out + identity
+        return output_tensor
+
+# up block 2,3
+class Res_up_block(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super().__init__()
+        self.ch_avg = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, kernel_size=1),
+            nn.BatchNorm2d(out_ch))
+        self.up_sample = nn.Upsample(scale_factor=2)
+        self.ch_avg = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, kernel_size=1),
+            nn.BatchNorm2d(out_ch))
+        self.double_conv = double_conv(in_ch, out_ch)
+
+    def forward(self, down_input, skip_input):
+        down_input = self.up_sample(down_input)
+        if skip_input.shape[-1] != down_input.shape[-1]:
+            diff =  down_input.shape[-1] - skip_input.shape[-1]
+            skip_input = F.pad(skip_input, (0, diff), "constant", 0)
+        if skip_input.shape[-2] != down_input.shape[-2]:
+            diff2 =  down_input.shape[-2] - skip_input.shape[-2]
+            skip_input = F.pad(skip_input, (0, 0, 0, diff2), "constant", 0)
+
+        input_tensor = torch.cat([down_input, skip_input], dim=1)
+        identity = self.ch_avg(input_tensor)
+        out = self.double_conv(input_tensor)
+        output_tensor = out + identity
+        return output_tensor
 
 
 
