@@ -32,6 +32,7 @@ class ACL_net(nn.Module):
         squeeze_output1 = self.squeeze_block1(conv_output2)
         squeeze_output2 = self.squeeze_block2(squeeze_output1)
         squeeze_output_g = self.squeeze_block3(squeeze_output2)
+        pdb.set_trace()
 
         attention_output_zhat_1, attention_output_a_1 = self.attention_block1(squeeze_output1, squeeze_output_g)
         attention_output_zhat_2, attention_output_a_2 = self.attention_block2(squeeze_output2, squeeze_output_g)
@@ -66,7 +67,7 @@ class Conv_block(nn.Module):
     def iterator(self, input_tensor, layer):
         temp = []
         for i in range(input_tensor.shape[2]):
-            temp.append(layer(input_tensor[:, i]))
+            temp.append(layer(input_tensor[:, :, i]))
         input_tensor = torch.stack(temp, dim=2)
         return input_tensor
 
@@ -86,8 +87,8 @@ class Squeeze_module(nn.Module):
     def forward(self, input_tensor):
         output_tensor = self.input_conv(input_tensor)
 
-        above_path = self.iterator(output_tensor[:, output_tensor.shape[1]/2:], self.conv2d)
-        below_path = self.conv3d(output_tensor[:, :output_tensor.shape[1]/2])
+        above_path = self.iterator(output_tensor[:, int(output_tensor.shape[1]/2):], self.conv2d)
+        below_path = self.conv3d(output_tensor[:, :int(output_tensor.shape[1]/2)])
 
         #Concatenation of the both paths
         output_tensor = torch.cat((above_path , below_path), 1)
@@ -99,7 +100,7 @@ class Squeeze_module(nn.Module):
     def iterator(self, input_tensor, layer):
         temp = []
         for i in range(input_tensor.shape[2]):
-            temp.append(layer(input_tensor[:, i]))
+            temp.append(layer(input_tensor[:, :, i]))
         input_tensor = torch.stack(temp, dim=2)
         return input_tensor
 
@@ -116,6 +117,7 @@ class Attention_module(nn.Module):
 
     def forward(self, input_tensor_z, input_tensor_g):
         output_tensor_z = self.input_conv(input_tensor_z)
+        pdb.set_trace()
         output_tensor = output_tensor_z + input_tensor_g
         output_tensor = F.relu(output_tensor)
         output_tensor = self.oneone_conv(output_tensor)
@@ -142,7 +144,7 @@ class Squeeze_block(nn.Module):
     def iterator(self, input_tensor, layer):
         temp = []
         for i in range(input_tensor.shape[2]):
-            temp.append(layer(input_tensor[:, i]))
+            temp.append(layer(input_tensor[:, :, i]))
         input_tensor = torch.stack(temp, dim=2)
         return input_tensor
 
@@ -175,8 +177,8 @@ class Final_Squeeze_module(nn.Module):
     def forward(self, input_tensor):
         output_tensor = self.input_conv(input_tensor)
 
-        above_path = self.conv3d_above(output_tensor[:, output_tensor.shape[1]/2:])
-        below_path = self.conv3d_below(output_tensor[:, :output_tensor.shape[1]/2])
+        above_path = self.conv3d_above(output_tensor[:, int(output_tensor.shape[1]/2):])
+        below_path = self.conv3d_below(output_tensor[:, :int(output_tensor.shape[1]/2)])
 
         #Concatenation of the both paths
         output_tensor = torch.cat((above_path , below_path), 1)
@@ -196,62 +198,6 @@ class Output_block(nn.Module):
         output_tensor = self.fully(output_tensor)
         return output_tensor
 
-
-# up block 1
-class Res_up_block_one(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super().__init__()
-        self.ch_avg = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, kernel_size=1),
-            nn.BatchNorm2d(out_ch))
-        self.up_sample = nn.Upsample(scale_factor=3)
-        self.ch_avg = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, kernel_size=1),
-            nn.BatchNorm2d(out_ch))
-        self.double_conv = double_conv(in_ch, out_ch)
-
-    def forward(self, down_input, skip_input):
-        down_input = self.up_sample(down_input)
-        if skip_input.shape[-1] != down_input.shape[-1]:
-            diff =  down_input.shape[-1] - skip_input.shape[-1]
-            skip_input = F.pad(skip_input, (0, diff), "constant", 0)
-        if skip_input.shape[-2] != down_input.shape[-2]:
-            diff2 =  down_input.shape[-2] - skip_input.shape[-2]
-            skip_input = F.pad(skip_input, (0, 0, 0, diff2), "constant", 0)
-
-        input_tensor = torch.cat([down_input, skip_input], dim=1)
-        identity = self.ch_avg(input_tensor)
-        out = self.double_conv(input_tensor)
-        output_tensor = out + identity
-        return output_tensor
-
-# up block 2,3
-class Res_up_block(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super().__init__()
-        self.ch_avg = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, kernel_size=1),
-            nn.BatchNorm2d(out_ch))
-        self.up_sample = nn.Upsample(scale_factor=2)
-        self.ch_avg = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, kernel_size=1),
-            nn.BatchNorm2d(out_ch))
-        self.double_conv = double_conv(in_ch, out_ch)
-
-    def forward(self, down_input, skip_input):
-        down_input = self.up_sample(down_input)
-        if skip_input.shape[-1] != down_input.shape[-1]:
-            diff =  down_input.shape[-1] - skip_input.shape[-1]
-            skip_input = F.pad(skip_input, (0, diff), "constant", 0)
-        if skip_input.shape[-2] != down_input.shape[-2]:
-            diff2 =  down_input.shape[-2] - skip_input.shape[-2]
-            skip_input = F.pad(skip_input, (0, 0, 0, diff2), "constant", 0)
-
-        input_tensor = torch.cat([down_input, skip_input], dim=1)
-        identity = self.ch_avg(input_tensor)
-        out = self.double_conv(input_tensor)
-        output_tensor = out + identity
-        return output_tensor
 
 
 
