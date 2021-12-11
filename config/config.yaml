@@ -20,4 +20,4 @@ target_dir: /home/soroosh/Documents/Repositories_target_files/ACL_tear/
 network_save_freq: 500 # the real save frequency will be this number times 3
 network_checkpoint_freq: 2
 valid_iteration_freq: 75
-num_iterations: 100000
+num_iterations: 1000 # number of epochs

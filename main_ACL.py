@@ -61,8 +61,8 @@ def main_train_3D(global_config_path="/home/soroosh/Documents/Repositories/ACL_t
                         loss_function=loss_function)
 
     # loading the data
-    train_loader = torch.ones((2, 1, 110, 281, 285))
-    valid_loader = torch.ones((2, 1, 110, 281, 285))
+    train_loader = torch.ones((1, 2, 2, 110, 281, 285))
+    valid_loader = torch.ones((1, 2, 2, 110, 281, 285))
 
     trainer.execute_training(train_loader=train_loader, valid_loader=valid_loader, augmentation=augment)
 
@@ -71,5 +71,6 @@ def main_train_3D(global_config_path="/home/soroosh/Documents/Repositories/ACL_t
 
 
 if __name__ == '__main__':
+    delete_experiment(experiment_name='testtest', global_config_path="/home/soroosh/Documents/Repositories/ACL_tear/config/config.yaml")
     main_train_3D(global_config_path="/home/soroosh/Documents/Repositories/ACL_tear/config/config.yaml",
-                  valid=False, resume=False, augment=True, experiment_name='testtest')
+                  valid=False, resume=False, augment=False, experiment_name='testtest')

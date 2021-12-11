@@ -247,8 +247,8 @@ class Training:
         total_f1_score = 0.0
 
         # we imagine we only have one batch
-        image = train_loader[0]
-        label = train_loader[1]
+        image = train_loader[:, 0]
+        label = train_loader[:, 1]
 
         label = label.long()
         image = image.float()
