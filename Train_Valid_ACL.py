@@ -9,7 +9,6 @@ https://github.com/tayebiarasteh/
 import os.path
 import time
 import pdb
-from enum import Enum
 from tensorboardX import SummaryWriter
 import torch
 import torchmetrics
@@ -247,8 +246,8 @@ class Training:
         total_f1_score = 0.0
 
         # we imagine we only have one batch
-        image = train_loader[:, 0]
-        label = train_loader[:, 1]
+        image = train_loader
+        label = torch.ones((1, 1))
 
         label = label.long()
         image = image.float()
@@ -258,81 +257,17 @@ class Training:
         self.optimiser.zero_grad()
 
         with torch.autograd.set_detect_anomaly(True):
-            output = self.model(image)
+            output, a_output = self.model(image)
+            max_a_output = a_output.argmax(dim=2)  # get the slice with ACL
+
             loss = self.loss_function(output, label[:, 0])
-            max_preds = output.argmax(dim=1, keepdim=True)  # get the index of the max probability (multi-class)
 
             loss.backward()
             self.optimiser.step()
 
         total_loss += loss.item()
-        f1_scorer = torchmetrics.F1(num_classes=output.shape[1], average='none').to(self.device)
-        f1_score = f1_scorer(max_preds.flatten(), label.flatten())[1:]
 
-        accuracy_calculator = torchmetrics.Accuracy(num_classes=output.shape[1]).to(self.device)
-        total_accuracy += accuracy_calculator(max_preds.flatten(), label.flatten()).item()
-
-        total_f1_score += f1_score.mean().item()
-
-        average_loss = total_loss / len(train_loader)
-        average_accuracy = total_accuracy / len(train_loader)
-        average_f1_score = total_f1_score / len(train_loader)
-
-        return average_f1_score, average_accuracy, average_loss
-
-
-
-    def valid_epoch_3D(self, valid_loader):
-        """This is the pipeline based on Pytorch's Dataset and Dataloader
-
-        Parameters
-        ----------
-        valid_loader: Pytorch dataloader object
-            validation data loader
-
-        Returns
-        -------
-        average_f1_score: float
-            average validation F1 score of the epoch
-
-        average_accuracy: float
-            average validation accuracy of the epoch
-
-        average_loss: float
-            average validation loss of the epoch
-        """
-
-        self.model.eval()
-        total_loss = 0.0
-        total_accuracy = 0.0
-        total_f1_score = 0.0
-
-        # we imagine we only have one batch
-        image = valid_loader[0]
-        label = valid_loader[1]
-
-        label = label.long()
-        image = image.float()
-        image = image.to(self.device)
-        label = label.to(self.device)
-
-        with torch.no_grad():
-            output = self.model(image)
-            loss = self.loss_function(output, label[:, 0])
-            max_preds = output.argmax(dim=1, keepdim=True)  # get the index of the max probability (multi-class)
-
-        total_loss += loss.item()
-        f1_scorer = torchmetrics.F1(num_classes=output.shape[1], average='none').to(self.device)
-        f1_score = f1_scorer(max_preds.flatten(), label.flatten())[1:]
-
-        accuracy_calculator = torchmetrics.Accuracy(num_classes=output.shape[1]).to(self.device)
-        total_accuracy += accuracy_calculator(max_preds.flatten(), label.flatten()).item()
-
-        total_f1_score += f1_score.mean().item()
-
-        average_loss = total_loss / len(valid_loader)
-        average_accuracy = total_accuracy / len(valid_loader)
-        average_f1_score = total_f1_score / len(valid_loader)
+        # TODO: evaluation metric calculation
 
         return average_f1_score, average_accuracy, average_loss
 

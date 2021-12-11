@@ -24,8 +24,7 @@ class ACL_net(nn.Module):
         self.squeeze_block3_2 = Final_Squeeze_block(first_feature_size * 4, first_feature_size * 4)
         self.attention_block1 = Attention_module(first_feature_size * 4, first_feature_size * 4)
         self.attention_block2 = Attention_module(first_feature_size * 8, first_feature_size * 8)
-        self.output_block = Output_block(first_feature_size * 8 + first_feature_size * 4,
-                                             1)
+        self.output_block = Output_block(first_feature_size * 8 + first_feature_size * 4, 1)
 
     def forward(self, input_tensor):
         conv_output1 = self.conv_block1(input_tensor)
@@ -54,7 +53,6 @@ class ACL_net(nn.Module):
         attention_output_zhat_full = torch.cat((attention_output_zhat_1 , attention_output_zhat_2), 1)
 
         output_tensor = self.output_block(attention_output_zhat_full)
-        pdb.set_trace()
 
         return output_tensor, a_output
 
@@ -230,9 +228,9 @@ class Output_block(nn.Module):
         self.fully = nn.Linear(in_ch, out_ch)
 
     def forward(self, input_tensor):
-        output_tensor = self.pool(input_tensor)
-        pdb.set_trace()
-        output_tensor = self.fully(output_tensor)
+        averaged = self.pool(input_tensor)
+        flattened = torch.flatten(averaged, 1)
+        output_tensor = self.fully(flattened)
         return output_tensor
 
 
